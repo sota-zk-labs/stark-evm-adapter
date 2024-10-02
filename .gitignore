@@ -6,3 +6,4 @@
 /examples/bootloader/hidden/*
 /examples/bootloader/stone-prover/*
 !.gitkeep
+.idea

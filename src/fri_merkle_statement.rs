@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 
 use ethers::{
@@ -10,7 +12,7 @@ use ethers::{
     types::U256,
 };
 use serde::{Deserialize, Serialize};
-
+use serde_json::json;
 use crate::ContractFunctionCall;
 
 /// Decommitment for a FRI layer merkle statement
@@ -63,5 +65,23 @@ impl FRIMerkleStatement {
 
         let call = self.contract_function_call();
         contract.method("verifyFRI", call).unwrap()
+    }
+
+    pub fn write_to_json(&self,  file_name: &str) {
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+        let mut fri_queue = self.input_interleaved.clone();
+        fri_queue.push(U256::from(0));
+
+        let json_data = json!({
+            "expectedRoot": self.expected_root.to_string(),
+            "friStepSize": self.fri_step_size.to_string(),
+            "evaluationPoint": self.evaluation_point.to_string(),
+            "friQueue": fri_queue.  iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "proof": self.proof.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+        });
+        //
+        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
     }
 }

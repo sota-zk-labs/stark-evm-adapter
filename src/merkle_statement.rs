@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 
 use ethers::{
@@ -9,7 +11,7 @@ use ethers::{
     types::{Address, U256},
 };
 use serde::{Deserialize, Serialize};
-
+use serde_json::json;
 use crate::ContractFunctionCall;
 
 /// Decommitment for a merkle statement
@@ -79,5 +81,27 @@ impl MerkleStatement {
 
         let verify_merkle_call = self.contract_function_call();
         contract.method("verifyMerkle", verify_merkle_call).unwrap()
+    }
+
+    pub fn write_to_json(&self,  file_name: &str) {
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+
+        let initial_merkle_queue: Vec<String> = self
+            .merkle_queue_indices
+            .iter()
+            .zip(self.merkle_queue_values.iter())
+            .flat_map(|(&index, &value)| vec![index.to_string(), value.to_string()])
+            .collect();
+
+        let json_data = json!({
+            "expectedRoot": self.expected_root.to_string(),
+            "height": self.merkle_height.to_string(),
+            "merkleView": self.proof.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "initialMerkleQueue": initial_merkle_queue,
+        });
+
+        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
     }
 }

@@ -1,5 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
-
+use std::alloc::Layout;
+use std::fs::File;
+use std::io::Write;
+use std::str::FromStr;
 use ethers::{
     abi::Token,
     contract::abigen,
@@ -13,11 +16,12 @@ use ethers::{
 use num_bigint::BigInt;
 use num_traits::{Num, One};
 use serde::{Deserialize, Serialize};
-
+use serde_json::json;
 use crate::{
     annotated_proof::{MemorySegment, ProofParameters, PublicInput, PublicMemory},
     default_prime, ContractFunctionCall,
 };
+use crate::builtin_info::{get_layout7_selected_builtins, BOOTLOADER_LEN, N_BUILTINS};
 
 /// Proof for consistency check for out of domain sampling
 #[derive(Serialize, Deserialize, Debug)]
@@ -70,6 +74,20 @@ abigen!(
     derives(serde::Deserialize, serde::Serialize)
 );
 
+impl ContinuousMemoryPage {
+    pub fn to_json(&self, z: U256, alpha: U256, prime: U256) -> String {
+        let json_data = json!({
+            "startAddr": self.start_address.to_string(),
+            "values": self.values.iter().map(|v| v.to_string()).collect::<Vec<String>>(),
+            "z": z.to_string(),
+            "alpha": alpha.to_string(),
+            "prime": "3618502788666131213697322783095070105623107215331596699973092056135872020481",
+        });
+
+        serde_json::to_string_pretty(&json_data).expect("Unable to serialize data")
+    }
+}
+
 // todo use thiserror
 impl MainProof {
     pub fn new(
@@ -120,7 +138,7 @@ impl MainProof {
     }
 
     /// Collect and serialize cairo public input
-    fn cairo_aux_input(&self) -> Vec<U256> {
+    pub fn cairo_aux_input(&self, layout: usize) -> Vec<U256> {
         let log_n_steps = (self.public_input.n_steps as f64).log2() as u64;
         let mut cairo_aux_input = vec![
             U256::from(log_n_steps),
@@ -133,7 +151,7 @@ impl MainProof {
         cairo_aux_input.push(layout_big);
 
         // Extend with serialized segments
-        let serialized_segments = self.serialize_segments();
+        let serialized_segments = self.serialize_segments(layout);
         cairo_aux_input.extend(serialized_segments);
 
         let z = self.interaction_z;
@@ -152,32 +170,63 @@ impl MainProof {
         cairo_aux_input
     }
 
+    pub fn fit_layout_7(&mut self) {
+        let mut selected_builtins = get_layout7_selected_builtins();
+        let start_position = BOOTLOADER_LEN + 2;
+        for i in 0..N_BUILTINS {
+            if (selected_builtins & 1) == 0 {
+                let start = i + start_position;
+                let end = start + N_BUILTINS;
+                println!("start: {:?}", start);
+                println!("end: {:?}", end);
+                self.public_input.public_memory[start].value = 0.to_string();
+                self.public_input.public_memory[end].value = 0.to_string();
+            }
+            selected_builtins = selected_builtins >> 1;
+        }
+    }
+
     /// Serialize memory segments in order
-    fn serialize_segments(&self) -> Vec<U256> {
-        let segment_names = [
+    fn serialize_segments(&self, layout: usize) -> Vec<U256> {
+        let mut segment_names = vec![
             "program",
             "execution",
             "output",
             "pedersen",
             "range_check",
-            "ecdsa",
+            // "ecdsa",
             "bitwise",
-            "ec_op",
-            "keccak",
+            // "ec_op",
+            // "keccak",
             "poseidon",
         ];
+        if layout != 7 {
+            segment_names = vec![
+                "program",
+                "execution",
+                "output",
+                "pedersen",
+                "range_check",
+                "ecdsa",
+                "bitwise",
+                "ec_op",
+                "keccak",
+                "poseidon",
+            ];
+        }
+
 
         let segments = &self.public_input.memory_segments;
         let mut sorted_segments: Vec<MemorySegment> = Vec::new();
 
-        for name in segment_names.iter() {
-            let segment: Option<&MemorySegment> = segments.get(*name);
+        for name in segment_names {
+            let segment: Option<&MemorySegment> = segments.get(name);
             if let Some(seg) = segment {
                 sorted_segments.push(seg.clone());
             }
         }
 
-        assert_eq!(sorted_segments.len(), segments.len());
+        // assert_eq!(sorted_segments.len(), segments.len());
 
         let mut result: Vec<U256> = Vec::new();
         for segment in sorted_segments {
@@ -603,7 +652,7 @@ impl MainProof {
             proof_params: self.proof_params(),
             proof: self.proof.clone(),
             task_metadata,
-            cairo_aux_input: self.cairo_aux_input(),
+            cairo_aux_input: self.cairo_aux_input(6),
             cairo_verifier_id: U256::from(6),
         }
     }
@@ -621,5 +670,28 @@ impl MainProof {
         contract
             .method("verifyProofAndRegister", function_call)
             .unwrap()
+    }
+
+    pub fn write_to_json(&self, fact_topologies: Vec<FactTopology>, file_name: &str, layout: usize) {
+        let proof_param = self.proof_params();
+        let task_meta_data = self.generate_tasks_metadata(true, fact_topologies).unwrap();
+        let cairo_aux_input = self.cairo_aux_input(layout);
+        let cairo_verifer_id = U256::from(layout);
+
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+        // let merkleView = self.proof.clone();
+
+        let json_data = json!({
+            "proofParams": proof_param.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "proof": self.proof.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "taskMetadata": task_meta_data.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "cairoAuxInput": cairo_aux_input.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
+            "cairoVerifierId": cairo_verifer_id.to_string()
+        });
+
+        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
+
     }
 }

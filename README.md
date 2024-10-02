@@ -19,7 +19,7 @@ stark-evm-adapter = "0.1.3"
 use stark_evm_adapter::annotated_proof::AnnotatedProof;
 use stark_evm_adapter::annotation_parser::split_fri_merkle_statements;
 
-// read an annotated proof
+// read an annotated proof7
 let file = std::fs::File::open("tests/fixtures/annotated_proof.json").unwrap();
 let reader = std::io::BufReader::new(file);
 let annotated_proof: AnnotatedProof = serde_json::from_reader(reader).unwrap();
