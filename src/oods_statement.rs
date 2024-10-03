@@ -173,10 +173,11 @@ impl MainProof {
     pub fn fit_layout_7(&mut self) {
         let mut selected_builtins = get_layout7_selected_builtins();
         let start_position = BOOTLOADER_LEN + 2;
-        for i in 0..N_BUILTINS {
+        for i in 0..N_BUILTINS-1 {
             if (selected_builtins & 1) == 0 {
                 let start = i + start_position;
                 let end = start + N_BUILTINS;
+                println!("i: {:?}", i);
                 println!("start: {:?}", start);
                 println!("end: {:?}", end);
                 self.public_input.public_memory[start].value = 0.to_string();

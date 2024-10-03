@@ -12,28 +12,28 @@ use crate::oods_statement::FactTopology;
 #[cfg(test)]
 #[test]
 fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
-    // let origin_proof_file = include_str!(concat!(
-    // env!("CARGO_MANIFEST_DIR"),
-    // "/proof/bootloader_serialized_proof.json"
-    // // "/tests/fixtures/annotated_proof.json"
-    // ));
-    //
-    //
-    // let annotated_proof: AnnotatedProof = serde_json::from_str(&origin_proof_file)?;
-    // // generate split proofs
-    // let mut split_proofs: SplitProofs = split_fri_merkle_statements(annotated_proof.clone()).unwrap();
-    //
-    // let topologies_file = include_str!(concat!(
-    // env!("CARGO_MANIFEST_DIR"),
-    // "/proof/fact_topologies.json"
-    // ));
-    // let topology_json: serde_json::Value = serde_json::from_str(&topologies_file).unwrap();
-    //
-    // let fact_topologies: Vec<FactTopology> =
-    //     serde_json::from_value(topology_json.get("fact_topologies").unwrap().clone()).unwrap();
-    //
-    // split_proofs.main_proof.fit_layout_7();
-    //
+    let origin_proof_file = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/proof_layout7/bootloader_serialized_proof.json"
+    // "/tests/fixtures/annotated_proof.json"
+    ));
+
+
+    let annotated_proof: AnnotatedProof = serde_json::from_str(&origin_proof_file)?;
+    // generate split proofs
+    let mut split_proofs: SplitProofs = split_fri_merkle_statements(annotated_proof.clone()).unwrap();
+
+    let topologies_file = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/proof_layout7/fact_topologies.json"
+    ));
+    let topology_json: serde_json::Value = serde_json::from_str(&topologies_file).unwrap();
+
+    let fact_topologies: Vec<FactTopology> =
+        serde_json::from_value(topology_json.get("fact_topologies").unwrap().clone()).unwrap();
+
+    split_proofs.main_proof.fit_layout_7();
+
     // for (i, fri_statement) in split_proofs.fri_merkle_statements.iter().enumerate() {
     //         fri_statement.write_to_json(&format!("proof/fri_verify_{}", i + 1));
     // }
@@ -63,13 +63,13 @@ fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
     // let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
     // let mut file = File::create("proof/memory_page_entries.json").expect("Unable to create file");
     // file.write_all(json_string.as_bytes()).expect("Unable to write data");
-    //
-    //
-    // split_proofs.main_proof.write_to_json(fact_topologies, &format!("proof/verify_proof_and_register",), 7);
-    //
-    //
-    // println!("vjp");
-    //
+
+
+    split_proofs.main_proof.write_to_json(fact_topologies, &format!("proof_layout7/verify_proof_and_register",), 7);
+
+
+    println!("vjp");
+
     Ok(())
 }
 
@@ -78,7 +78,6 @@ fn test_parser_layout6() -> Result<(), Box<dyn std::error::Error>>{
     let origin_proof_file = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/proof_layout6/bootloader_serialized_proof.json"
-    // "/tests/fixtures/annotated_proof.json"
     ));
     let annotated_proof: AnnotatedProof = serde_json::from_str(&origin_proof_file)?;
     // generate split proofs
