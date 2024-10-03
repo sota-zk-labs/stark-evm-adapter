@@ -83,9 +83,7 @@ impl MerkleStatement {
         contract.method("verifyMerkle", verify_merkle_call).unwrap()
     }
 
-    pub fn write_to_json(&self,  file_name: &str) {
-        let file_path = format!("{}.json", file_name);
-        let mut file = File::create(file_path).expect("Unable to create file");
+    pub fn to_json(&self) -> String{
 
         let initial_merkle_queue: Vec<String> = self
             .merkle_queue_indices
@@ -101,7 +99,15 @@ impl MerkleStatement {
             "initialMerkleQueue": initial_merkle_queue,
         });
 
-        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
+        serde_json::to_string_pretty(&json_data).expect("Unable to serialize data")
+    }
+
+    pub fn write_to_json(&self,  file_name: &str) {
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+
+        let json_string = self.to_json();
         file.write_all(json_string.as_bytes()).expect("Unable to write data");
+
     }
 }

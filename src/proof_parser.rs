@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
 use ethers::types::U256;
-use serde_json::{json, to_string_pretty};
+use serde_json::{to_string_pretty};
 use crate::annotated_proof::AnnotatedProof;
 use crate::annotation_parser::{split_fri_merkle_statements, SplitProofs};
 use crate::default_prime;
@@ -15,7 +15,6 @@ fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
     let origin_proof_file = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/proof_layout7/bootloader_serialized_proof.json"
-    // "/tests/fixtures/annotated_proof.json"
     ));
 
 
@@ -34,35 +33,30 @@ fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
 
     split_proofs.main_proof.fit_layout_7();
 
-    // for (i, fri_statement) in split_proofs.fri_merkle_statements.iter().enumerate() {
-    //         fri_statement.write_to_json(&format!("proof/fri_verify_{}", i + 1));
-    // }
-    //
-    // for i in 0..split_proofs.merkle_statements.len() {
-    //     let key = format!("Trace {}", i);
-    //     let trace_merkle = split_proofs.merkle_statements.get(&key).unwrap();
-    //     trace_merkle.write_to_json(&format!("proof/merkle_verify_{}", i+1));
-    // }
-    //
-    //
-    // let (_, continuous_pages) = split_proofs.main_proof.memory_page_registration_args();
-    // let mut memory_page_entries: Vec<serde_json::Value> = vec![];
-    // for page in continuous_pages {
-    //     let page_json = page.to_json(
-    //         split_proofs.main_proof.interaction_z,
-    //         split_proofs.main_proof.interaction_alpha,
-    //         default_prime(),
-    //         // U256::from("3618502788666131213697322783095070105623107215331596699973092056135872020481")
-    //     );
-    //     memory_page_entries.push(serde_json::from_str(&page_json).unwrap());
-    // }
-    // let json_data = json!({
-    //     "memoryPageEntries": memory_page_entries
-    // });
-    //
-    // let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
-    // let mut file = File::create("proof/memory_page_entries.json").expect("Unable to create file");
-    // file.write_all(json_string.as_bytes()).expect("Unable to write data");
+    for (i, fri_statement) in split_proofs.fri_merkle_statements.iter().enumerate() {
+            fri_statement.write_to_json(&format!("proof/fri_verify_{}", i + 1));
+    }
+
+    for i in 0..split_proofs.merkle_statements.len() {
+        let key = format!("Trace {}", i);
+        let trace_merkle = split_proofs.merkle_statements.get(&key).unwrap();
+        trace_merkle.write_to_json(&format!("proof/merkle_verify_{}", i+1));
+    }
+
+
+    let (_, continuous_pages) = split_proofs.main_proof.memory_page_registration_args();
+    for (index, page) in continuous_pages.iter().enumerate() {
+        let page_json = page.to_json(
+            split_proofs.main_proof.interaction_z,
+            split_proofs.main_proof.interaction_alpha,
+            default_prime(),
+        );
+        let json_value: serde_json::Value = serde_json::from_str(&page_json).unwrap();
+        let json_string = to_string_pretty(&json_value).expect("Unable to serialize data");
+        let filename = format!("proof_layout7/register_memory_page_{}.json", index + 1);
+        let mut file = File::create(&filename).expect("Unable to create file");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
+    }
 
 
     split_proofs.main_proof.write_to_json(fact_topologies, &format!("proof_layout7/verify_proof_and_register",), 7);
@@ -103,24 +97,22 @@ fn test_parser_layout6() -> Result<(), Box<dyn std::error::Error>>{
     }
 
     let (_, continuous_pages) = split_proofs.main_proof.memory_page_registration_args();
-    let mut memory_page_entries: Vec<serde_json::Value> = vec![];
-    for page in continuous_pages {
+    for (index, page) in continuous_pages.iter().enumerate() {
         let page_json = page.to_json(
             split_proofs.main_proof.interaction_z,
             split_proofs.main_proof.interaction_alpha,
             default_prime(),
         );
-        memory_page_entries.push(serde_json::from_str(&page_json).unwrap());
+        let json_value: serde_json::Value = serde_json::from_str(&page_json).unwrap();
+        let json_string = to_string_pretty(&json_value).expect("Unable to serialize data");
+        let filename = format!("proof_layout6/register_memory_page_{}.json", index + 1);
+        let mut file = File::create(&filename).expect("Unable to create file");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
     }
-    let json_data = json!({
-        "memoryPageEntries": memory_page_entries
-    });
-
-    let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
-    let mut file = File::create("proof_layout6/memory_page_entries.json").expect("Unable to create file");
-    file.write_all(json_string.as_bytes()).expect("Unable to write data");
-
     split_proofs.main_proof.write_to_json(fact_topologies, &format!("proof_layout6/verify_proof_and_register",), 6);
+
+
+
     Ok(())
 }
 

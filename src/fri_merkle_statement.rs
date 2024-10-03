@@ -67,9 +67,7 @@ impl FRIMerkleStatement {
         contract.method("verifyFRI", call).unwrap()
     }
 
-    pub fn write_to_json(&self,  file_name: &str) {
-        let file_path = format!("{}.json", file_name);
-        let mut file = File::create(file_path).expect("Unable to create file");
+    pub fn to_json(&self) -> String {
         let mut fri_queue = self.input_interleaved.clone();
         fri_queue.push(U256::from(0));
 
@@ -80,8 +78,13 @@ impl FRIMerkleStatement {
             "friQueue": fri_queue.  iter().map(|p| p.to_string()).collect::<Vec<String>>(),
             "proof": self.proof.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
         });
-        //
-        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
+        serde_json::to_string_pretty(&json_data).expect("Unable to serialize data")
+    }
+
+    pub fn write_to_json(&self, file_name: &str) {
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+        let json_string = self.to_json();
         file.write_all(json_string.as_bytes()).expect("Unable to write data");
     }
 }

@@ -1,5 +1,4 @@
 use std::{collections::HashMap, sync::Arc};
-use std::alloc::Layout;
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
@@ -81,7 +80,7 @@ impl ContinuousMemoryPage {
             "values": self.values.iter().map(|v| v.to_string()).collect::<Vec<String>>(),
             "z": z.to_string(),
             "alpha": alpha.to_string(),
-            "prime": "3618502788666131213697322783095070105623107215331596699973092056135872020481",
+            "prime": prime.to_string(),
         });
 
         serde_json::to_string_pretty(&json_data).expect("Unable to serialize data")
@@ -673,15 +672,11 @@ impl MainProof {
             .unwrap()
     }
 
-    pub fn write_to_json(&self, fact_topologies: Vec<FactTopology>, file_name: &str, layout: usize) {
+    pub fn to_json(&self, fact_topologies: Vec<FactTopology>, layout: usize) -> String{
         let proof_param = self.proof_params();
         let task_meta_data = self.generate_tasks_metadata(true, fact_topologies).unwrap();
         let cairo_aux_input = self.cairo_aux_input(layout);
         let cairo_verifer_id = U256::from(layout);
-
-        let file_path = format!("{}.json", file_name);
-        let mut file = File::create(file_path).expect("Unable to create file");
-        // let merkleView = self.proof.clone();
 
         let json_data = json!({
             "proofParams": proof_param.iter().map(|p| p.to_string()).collect::<Vec<String>>(),
@@ -691,8 +686,13 @@ impl MainProof {
             "cairoVerifierId": cairo_verifer_id.to_string()
         });
 
-        let json_string = serde_json::to_string_pretty(&json_data).expect("Unable to serialize data");
-        file.write_all(json_string.as_bytes()).expect("Unable to write data");
+        serde_json::to_string_pretty(&json_data).expect("Unable to serialize data")
+    }
 
+    pub fn write_to_json(&self, fact_topologies: Vec<FactTopology>, file_name: &str, layout: usize) {
+        let json_string = self.to_json(fact_topologies, layout);
+        let file_path = format!("{}.json", file_name);
+        let mut file = File::create(file_path).expect("Unable to create file");
+        file.write_all(json_string.as_bytes()).expect("Unable to write data");
     }
 }
