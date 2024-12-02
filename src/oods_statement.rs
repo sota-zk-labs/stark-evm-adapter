@@ -549,6 +549,10 @@ impl MainProof {
         };
         let memory = Self::extract_public_memory(&self.public_input)?;
         let mut output = Self::extract_program_output(&self.public_input, &memory)?;
+        let d1 = &output[0].to_string()[0..];
+        let d2 = &output[1].to_string()[0..];
+        let d3 = &output[2].to_string()[0..];
+        let d4 = &output[3].to_string()[0..];
 
         let n_programs: usize = output
             .get(n_programs_entry)

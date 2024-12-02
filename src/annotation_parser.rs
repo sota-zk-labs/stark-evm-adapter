@@ -6,7 +6,7 @@ use num_traits::{Num, One};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-
+use ethers::core::k256::elliptic_curve::consts::U25;
 use crate::annotated_proof::AnnotatedProof;
 use crate::errors::ParseError;
 use crate::fri_merkle_statement::FRIMerkleStatement;
@@ -355,6 +355,9 @@ fn gen_merkle_statement_call(
     merkle_commit: CommitmentLine,
 ) -> Result<MerkleStatement, ParseError> {
     let qs: Vec<&str> = merkle_extras.iter().map(|n| &n.name[..]).collect();
+    let a = qs[0];
+    let b = qs[0];
+    let c = qs[0];
     let heights: Vec<usize> = merkle_extras
         .iter()
         .map(|mline| mline.node.bits() - 1)
@@ -367,14 +370,25 @@ fn gen_merkle_statement_call(
     let root = U256::from_str_radix(&merkle_commit.digest, 16)?;
     let merkle_queue_values: Vec<U256> = merkle_extras
         .iter()
-        .map(|mline| Ok(U256::from_str_radix(&mline.digest, 16)?))
+        .map(|mline| {
+
+            let line = &mline.annotation[0..];
+            if mline.node == U256::from(9223134) {
+                let d = &U256::from_str_radix(&mline.digest, 16)?.to_string()[0..];
+                println!("ddd: {:?}", d);
+                let a = 1;
+            }
+            Ok(U256::from_str_radix(&mline.digest, 16)?)
+        })
         .collect::<Result<Vec<U256>, ParseError>>()?;
+
     let proof: Vec<U256> = merkle_original
         .iter()
         .map(|mline| Ok(U256::from_str_radix(&mline.digest, 16)?))
         .collect::<Result<Vec<U256>, ParseError>>()?;
     let merkle_queue_indices: Vec<U256> = merkle_extras.iter().map(|mline| mline.node).collect();
 
+    let tmp = &proof[0].to_string()[0..];
     Ok(MerkleStatement::new(
         root,
         qs.len(),
@@ -385,7 +399,7 @@ fn gen_merkle_statement_call(
     ))
 }
 
-fn montgomery_encode(element: &str) -> Result<U256, ParseError> {
+pub fn montgomery_encode(element: &str) -> Result<U256, ParseError> {
     let prime = BigUint::from_str_radix(
         "800000000000011000000000000000000000000000000000000000000000001",
         16,
@@ -420,7 +434,7 @@ fn gen_fri_merkle_statement_call(
 ) -> Result<FRIMerkleStatement, ParseError> {
     let root = U256::from_str_radix(&merkle_commitment.digest, 16)?;
     let eval_point = U256::from_str_radix(&evaluation_point.point, 16)?;
-
+    let tmp_eval_point = &eval_point.to_string()[0..];
     let heights: Vec<usize> = merkle_extras
         .iter()
         .map(|mline| mline.node.bits() - 1)
@@ -446,42 +460,75 @@ fn gen_fri_merkle_statement_call(
         .iter()
         .map(|fline| U256::from(fline.index + (1 << input_height)))
         .collect();
-
-    let output_layer_queries: Vec<U256> = merkle_extras.iter().map(|mline| mline.node).collect();
-
+    let input_layer_query_0 = &input_layer_queries[0].to_string()[0..];
+    let output_layer_queries: Vec<U256> = merkle_extras.iter().map(|mline| {
+        if mline.node == U256::from(9223134) {
+            let d = &U256::from_str_radix(&mline.digest, 16).unwrap().to_string()[0..];
+            println!("ddd: {:?}", d);
+            let a = 1;
+        }
+        mline.node
+    }).collect();
+    let output_layer_query_0 = &output_layer_queries[0].to_string()[0..];
     let input_layer_values: Vec<U256> = fri_extras
         .values
         .iter()
-        .map(|fline| montgomery_encode(&fline.element))
+        .map(|fline| {
+            let d = &fline.element[0..];
+            montgomery_encode(&fline.element)
+        })
         .collect::<Result<Vec<U256>, ParseError>>()?;
+    let input_layer_value_0 = &input_layer_values[0].to_string()[0..];
 
     let output_layer_values: Vec<U256> = fri_extras_next
         .values
         .iter()
-        .map(|fline| montgomery_encode(&fline.element))
+        .map(|fline| {
+            let d = &fline.element[0..];
+            montgomery_encode(&fline.element)
+        })
         .collect::<Result<Vec<U256>, ParseError>>()?;
+
+    let output_layer_value_0 = &output_layer_values[0].to_string()[0..];
 
     let input_layer_inverses: Vec<U256> = fri_extras
         .inverses
         .iter()
-        .map(|fline| Ok(U256::from_str_radix(&fline.inv, 16)?))
+        .map(|fline| {
+            let d = &fline.inv[0..];
+            Ok(U256::from_str_radix(&fline.inv, 16)?)
+        })
         .collect::<Result<Vec<U256>, ParseError>>()?;
-
+    let input_layer_inverse_0 = &input_layer_inverses[0].to_string()[0..];
     let output_layer_inverses: Vec<U256> = fri_extras_next
         .inverses
         .iter()
-        .map(|fline| Ok(U256::from_str_radix(&fline.inv, 16)?))
+        .map(|fline| {
+            let d = &fline.inv[0..];
+            Ok(U256::from_str_radix(&fline.inv, 16)?)
+        })
         .collect::<Result<Vec<U256>, ParseError>>()?;
+    let output_layer_inverse_0 = &output_layer_inverses[0].to_string()[0..];
 
     let proof: Vec<U256> = fri_original
         .iter()
-        .map(|fline| montgomery_encode(&fline.element))
+        .map(|fline| {
+            let d = &fline.element[0..];
+            let q = &montgomery_encode(&fline.element).unwrap().to_string()[0..];
+            montgomery_encode(&fline.element)
+        })
         .chain(
             merkle_original
                 .iter()
-                .map(|mline| Ok(U256::from_str_radix(&mline.digest, 16)?)),
+                .map(|mline| {
+                    let d = &mline.digest[0..];
+                    let q = &(U256::from_str_radix(&mline.digest, 16)).unwrap().to_string()[0..];
+                    Ok(U256::from_str_radix(&mline.digest, 16)?)
+                }),
         )
         .collect::<Result<Vec<U256>, ParseError>>()?;
+
+    let proof_0 = &proof[0].to_string()[0..];
 
     let input_interleaved = interleave(
         input_layer_queries.clone(),
@@ -523,12 +570,18 @@ fn parse_fri_merkles_extra(
     for line in extra_annot_lines {
         if is_merkle_line(line) {
             let mline = parse_merkle_line(line)?;
+            if mline.node == U256::from(9223134) {
+                println!("{:?}", mline);
+            }
             merkle_extras_dict
                 .entry(mline.name.clone())
                 .or_default()
                 .push(mline);
         } else if is_fri_line(line) {
             let fline = parse_fri_line(line)?;
+            let line_2 = line;
+            let name = &fline.name[0..];
+            let d = &fline.element[0..];
             if !fri_extras_dict.contains_key(&fline.name) {
                 fri_extras_dict.insert(
                     fline.name.clone(),
@@ -615,10 +668,21 @@ fn parse_fri_merkles_original(
         } else {
             main_annot.push_str(&line);
             main_annot.push('\n');
+            let vline = &line[0..];
             let (start, end) = line_to_indices(&line)?;
+            if (start == 10120) {
+                println!("vline: {:?}", vline);
+                println!("{:?}", &orig_proof[start..end]);
+
+                let d = &U256::from_big_endian(&orig_proof[start..end]).to_string()[0..];
+                println!("{:?}", d);
+            }
+            let d = &orig_proof[start..end];
             main_proof.extend_from_slice(&orig_proof[start..end]);
         }
     }
+    let d = &main_annot.clone()[0..main_annot.len()];
+    let d1 = &main_proof.clone()[0..main_proof.len()];
 
     Ok(FriMerklesOriginal {
         merkle_originals: merkle_original_dict,
@@ -664,6 +728,7 @@ fn single_column_merkle_patch(
                 let node = U256::from(parsed_fri_line.row) + U256::from(1 << height);
                 let element = montgomery_encode(&parsed_fri_line.element)?;
                 let element_hex = format!("{:0>64x}", element);
+                let tmp = &element_hex[0..element_hex.len()];
                 let merkle_line = MerkleLine {
                     name: name.clone(),
                     node,
@@ -723,6 +788,7 @@ pub fn split_fri_merkle_statements(
                 fri_merkles_original.merkle_commitments[&name].clone(),
             )
             .unwrap();
+
             (name, statement)
         })
         .collect::<HashMap<_, _>>();
@@ -732,6 +798,7 @@ pub fn split_fri_merkle_statements(
         .into_iter()
         .enumerate()
         .map(|(i, name)| {
+            let tmp = &name[0..];
             gen_fri_merkle_statement_call(
                 fri_extras_list[i].clone(),
                 fri_extras_list[i + 1].clone(),
@@ -746,7 +813,12 @@ pub fn split_fri_merkle_statements(
 
     let main_proof = {
         let mut main_proof = fri_merkles_original.original_proof;
-
+        for i in 0..main_proof.len() {
+            if main_proof[i] == 4 && main_proof[i + 1] == 124 && main_proof[i+3] == 105 {
+                println!("i: {:?}", i);
+                break;
+            }
+        }
         for fri in &fri_merkle_statements[..fri_merkle_statements.len() - 1] {
             let fri_output_interleaved = fri
                 .output_interleaved
@@ -780,20 +852,28 @@ pub fn split_fri_merkle_statements(
 /// This conversion is what's needed in order to send a binary proof
 /// into an EVM deployed verifier.
 fn proof_hex2int_list(proof: Vec<u8>) -> Vec<U256> {
+    println!("proof length: {:?}", proof.len());
     let chunk_size = 32; // U256 is 32 bytes (256 bits)
     let mut padded_proof = proof;
 
     // Pad the vector with zeros until its length is a multiple of chunk_size
     while padded_proof.len() % chunk_size != 0 {
         padded_proof.push(0);
+        println!("vjp");
     }
 
-    padded_proof
+
+    let d: Vec<U256> = padded_proof
         .chunks(chunk_size)
         .map(|chunk| {
             let mut array = [0u8; 32];
             array.copy_from_slice(chunk);
+
+            let d = &U256::from_big_endian(&array).to_string()[0..];
             U256::from_big_endian(&array)
         })
-        .collect()
+        .collect();
+
+    println!("proof U256: {:?}", d);
+    d
 }

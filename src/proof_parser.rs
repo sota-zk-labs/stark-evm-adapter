@@ -5,7 +5,7 @@ use std::str::FromStr;
 use ethers::types::U256;
 use serde_json::{to_string_pretty};
 use crate::annotated_proof::AnnotatedProof;
-use crate::annotation_parser::{split_fri_merkle_statements, SplitProofs};
+use crate::annotation_parser::{montgomery_encode, split_fri_merkle_statements, SplitProofs};
 use crate::default_prime;
 use crate::oods_statement::FactTopology;
 
@@ -65,6 +65,14 @@ fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
     println!("vjp");
 
     Ok(())
+}
+
+#[test]
+fn vjp() {
+    let string = "aecfcc94ce7e90195568d30c1f71e7d83748480f000000000000000000000000";
+    let d = &montgomery_encode(string).unwrap().to_string()[0..];
+    println!("d: {:?}", d);
+    let a = 1;
 }
 
 #[test]
