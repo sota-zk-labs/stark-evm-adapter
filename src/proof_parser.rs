@@ -9,64 +9,6 @@ use crate::annotation_parser::{montgomery_encode, split_fri_merkle_statements, S
 use crate::default_prime;
 use crate::oods_statement::FactTopology;
 
-#[cfg(test)]
-#[test]
-fn test_parser_layout7() -> Result<(), Box<dyn std::error::Error>>{
-    let origin_proof_file = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/proof_layout7/bootloader_serialized_proof.json"
-    ));
-
-
-    let annotated_proof: AnnotatedProof = serde_json::from_str(&origin_proof_file)?;
-    // generate split proofs
-    let mut split_proofs: SplitProofs = split_fri_merkle_statements(annotated_proof.clone()).unwrap();
-
-    let topologies_file = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/proof_layout7/fact_topologies.json"
-    ));
-    let topology_json: serde_json::Value = serde_json::from_str(&topologies_file).unwrap();
-
-    let fact_topologies: Vec<FactTopology> =
-        serde_json::from_value(topology_json.get("fact_topologies").unwrap().clone()).unwrap();
-
-    split_proofs.main_proof.fit_layout_7();
-
-    for (i, fri_statement) in split_proofs.fri_merkle_statements.iter().enumerate() {
-            fri_statement.write_to_json(&format!("proof/fri_verify_{}", i + 1));
-    }
-
-    for i in 0..split_proofs.merkle_statements.len() {
-        let key = format!("Trace {}", i);
-        let trace_merkle = split_proofs.merkle_statements.get(&key).unwrap();
-        trace_merkle.write_to_json(&format!("proof/merkle_verify_{}", i+1));
-    }
-
-
-    let (_, continuous_pages) = split_proofs.main_proof.memory_page_registration_args();
-    for (index, page) in continuous_pages.iter().enumerate() {
-        let page_json = page.to_json(
-            split_proofs.main_proof.interaction_z,
-            split_proofs.main_proof.interaction_alpha,
-            default_prime(),
-        );
-        let json_value: serde_json::Value = serde_json::from_str(&page_json).unwrap();
-        let json_string = to_string_pretty(&json_value).expect("Unable to serialize data");
-        let filename = format!("proof_layout7/register_memory_page_{}.json", index + 1);
-        let mut file = File::create(&filename).expect("Unable to create file");
-        file.write_all(json_string.as_bytes()).expect("Unable to write data");
-    }
-
-
-    split_proofs.main_proof.write_to_json(fact_topologies, &format!("proof_layout7/verify_proof_and_register",), 7);
-
-
-    println!("vjp");
-
-    Ok(())
-}
-
 #[test]
 fn vjp() {
     let string = "aecfcc94ce7e90195568d30c1f71e7d83748480f000000000000000000000000";

@@ -859,7 +859,6 @@ fn proof_hex2int_list(proof: Vec<u8>) -> Vec<U256> {
     // Pad the vector with zeros until its length is a multiple of chunk_size
     while padded_proof.len() % chunk_size != 0 {
         padded_proof.push(0);
-        println!("vjp");
     }
 
 
